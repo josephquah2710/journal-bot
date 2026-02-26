@@ -1,0 +1,10 @@
+name = input("What is your name? ")
+age = int(input("How old are you? "))
+birth_year = 2026 - age
+colour = input("What is your favourite colour? ")
+print()
+print("Hello ", name + "!")
+print("You were born around ", birth_year)
+print("Your favourite colour is ", colour)
+print("Nice to meet you!")
+print(str(age) + " is a great age to start practicing coding!")
