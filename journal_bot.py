@@ -114,6 +114,42 @@ def get_today_entry(user_id: int):
             return cur.fetchone()
 
 # =====================
+# Step 7 - Download command
+# =====================        
+from io import BytesIO
+
+async def download_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    entry = get_today_entry(user_id)
+
+    if not entry:
+        await update.message.reply_text("No journal found for today yet.")
+        return
+
+    # Build a text file content
+    lines = []
+    lines.append(f"Date: {entry['entry_date']}")
+    lines.append("")
+    lines.append(f"Mood: {entry['mood']}")
+    lines.append("")
+    lines.append("What happened:")
+    lines.append(entry["events"] or "")
+    lines.append("")
+    lines.append("Reflections:")
+    for item in entry["reflections"]:
+        lines.append(f"- Q: {item['q']}")
+        lines.append(f"  A: {item['a']}")
+        lines.append("")
+
+    content = "\n".join(lines)
+
+    # Create an in-memory file
+    buf = BytesIO(content.encode("utf-8"))
+    buf.name = f"journal_{entry['entry_date']}.txt"  # Telegram uses this filename
+
+    await update.message.reply_document(document=buf, filename=buf.name)        
+
+# =====================
 # Bot commands
 # =====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -205,6 +241,7 @@ app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("today", today_command))
+app.add_handler(CommandHandler("download", download_command))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 app.run_polling()
