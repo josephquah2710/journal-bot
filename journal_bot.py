@@ -105,7 +105,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         del user_states[user_id]
         return
 
+async def today_journal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    today = date.today()
+    filename = f"journals/{today}.txt"
 
+    if not os.path.exists(filename):
+        await update.message.reply_text("No journal found for today.")
+        return
+
+    with open(filename, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    # Telegram message limit safety
+    if len(content) > 4000:
+        content = content[:4000] + "\n\n(Truncated)"
+
+    await update.message.reply_text(content)
+
+app.add_handler(CommandHandler("today", today_journal))
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
