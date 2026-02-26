@@ -1,1 +1,1 @@
-python journal_bot.py
+web: python journal_bot.py
