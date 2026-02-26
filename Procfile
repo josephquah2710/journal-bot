@@ -1,1 +1,1 @@
-web: python journal_bot.py
+worker: python journal_bot.py
