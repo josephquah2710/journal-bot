@@ -6,6 +6,33 @@ from datetime import date
 import psycopg
 from psycopg.rows import dict_row
 
+#====================
+#put date time functions to read specific date journal entries, e.g. /entry 2024-06-01
+#====================
+from datetime import datetime, date
+from typing import Optional
+
+def parse_yyyy_mm_dd(s: str) -> Optional[date]:
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+def get_entry_by_date(user_id: int, entry_date: date):
+    with psycopg.connect(DATABASE_URL, row_factory=dict_row) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT entry_date, mood, events, reflections, created_at
+                FROM journal_entries
+                WHERE user_id=%s AND entry_date=%s
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (user_id, entry_date),
+            )
+            return cur.fetchone()
+
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -120,15 +147,24 @@ from io import BytesIO
 
 async def download_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    entry = get_today_entry(user_id)
 
+    # Accept: /download or /download YYYY-MM-DD
+    if len(context.args) == 0:
+        target_date = date.today()
+    else:
+        target_date = parse_yyyy_mm_dd(context.args[0])
+        if not target_date:
+            await update.message.reply_text("Use: /download YYYY-MM-DD (example: /download 2026-02-26)")
+            return
+
+    entry = get_entry_by_date(user_id, target_date)
     if not entry:
-        await update.message.reply_text("No journal found for today yet.")
+        await update.message.reply_text(f"No journal found for {target_date}.")
         return
 
-    # Build a text file content
     lines = []
     lines.append(f"Date: {entry['entry_date']}")
+    lines.append(f"Saved: {entry['created_at']}")
     lines.append("")
     lines.append(f"Mood: {entry['mood']}")
     lines.append("")
@@ -143,9 +179,8 @@ async def download_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     content = "\n".join(lines)
 
-    # Create an in-memory file
     buf = BytesIO(content.encode("utf-8"))
-    buf.name = f"journal_{entry['entry_date']}.txt"  # Telegram uses this filename
+    buf.name = f"journal_{entry['entry_date']}.txt"
 
     await update.message.reply_document(document=buf, filename=buf.name)        
 
@@ -174,6 +209,35 @@ async def today_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for item in entry["reflections"]:
         text += f"- {item['q']}\n  {item['a']}\n"
 
+    await update.message.reply_text(text[:4000])
+
+async def view_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id 
+
+ # Accept: /view or /view YYYY-MM-DD
+    if len(context.args) == 0:
+        target_date = date.today()
+    else:
+        target_date = parse_yyyy_mm_dd(context.args[0])
+        if not target_date:
+            await update.message.reply_text("Use: /view YYYY-MM-DD (example: /view 2026-02-26)")
+            return
+
+    entry = get_entry_by_date(user_id, target_date)
+    if not entry:
+        await update.message.reply_text(f"No journal found for {target_date}.")
+        return
+
+    text = (
+        f"🗓 {entry['entry_date']} (latest)\n\n"
+        f"Mood: {entry['mood']}\n\n"
+        f"What happened:\n{entry['events']}\n\n"
+        "Reflections:\n"
+    )
+    for item in entry["reflections"]:
+        text += f"- {item['q']}\n  {item['a']}\n"
+
+ # Telegram limit safety
     await update.message.reply_text(text[:4000])
 
 # =====================
@@ -241,6 +305,7 @@ app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("today", today_command))
+app.add_handler(CommandHandler("view", view_command))
 app.add_handler(CommandHandler("download", download_command))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
