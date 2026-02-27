@@ -148,13 +148,13 @@ from io import BytesIO
 async def download_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-    # Accept: /download or /download YYYY-MM-DD
+    # Accept: /download or /download DD-MM-YYYY
     if len(context.args) == 0:
         target_date = date.today()
     else:
-        target_date = parse_yyyy_mm_dd(context.args[0])
+        target_date = parse_dd_mm_yyyy(context.args[0])
         if not target_date:
-            await update.message.reply_text("Use: /download YYYY-MM-DD (example: /download 2026-02-26)")
+            await update.message.reply_text("Use: /download DD-MM-YYYY (example: /download 26-02-2026)")
             return
 
     entry = get_entry_by_date(user_id, target_date)
@@ -214,13 +214,13 @@ async def today_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def view_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id 
 
- # Accept: /view or /view YYYY-MM-DD
+ # Accept: /view or /view DD-MM-YYYY
     if len(context.args) == 0:
         target_date = date.today()
     else:
-        target_date = parse_yyyy_mm_dd(context.args[0])
+        target_date = parse_dd_mm_yyyy(context.args[0])
         if not target_date:
-            await update.message.reply_text("Use: /view YYYY-MM-DD (example: /view 2026-02-26)")
+            await update.message.reply_text("Use: /view DD-MM-YYYY (example: /view 26-02-2026)")
             return
 
     entry = get_entry_by_date(user_id, target_date)
