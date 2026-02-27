@@ -66,6 +66,8 @@ REFLECTION_QUESTIONS = [
     "Where did you feel most at peace today?",
     "What was one small win today?",
     "What’s one thing you want to let go of?",
+    "Who made a positive impact on your day?",
+    "What’s one thing you want to remember from today?",
 ]
 
 QUESTIONS_PER_SESSION = 3
