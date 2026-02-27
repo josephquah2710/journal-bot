@@ -7,6 +7,24 @@ import psycopg
 from psycopg.rows import dict_row
 
 #====================
+#get random entry function for /random command
+#====================
+def get_random_entry(user_id: int):
+    with psycopg.connect(DATABASE_URL, row_factory=dict_row) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT entry_date, mood, events, reflections, created_at
+                FROM journal_entries
+                WHERE user_id = %s
+                ORDER BY RANDOM()
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            return cur.fetchone()
+
+#====================
 #put date time functions to read specific date journal entries, e.g. /entry 2024-06-01
 #====================
 from datetime import datetime, date
@@ -239,6 +257,27 @@ async def view_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for item in entry["reflections"]:
         text += f"- {item['q']}\n  {item['a']}\n"
 
+async def random_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    entry = get_random_entry(user_id)
+
+    if not entry:
+        await update.message.reply_text("No journal entries found yet. Write one with /start 🙂")
+        return
+
+    text = (
+        f"🎲 Random Journal Entry\n"
+        f"🗓 {entry['entry_date']}\n\n"
+        f"Mood: {entry['mood']}\n\n"
+        f"What happened:\n{entry['events']}\n\n"
+        "Reflections:\n"
+    )
+
+    for item in entry["reflections"]:
+        text += f"- {item['q']}\n  {item['a']}\n"
+
+    await update.message.reply_text(text[:4000])
+
  # Telegram limit safety
     await update.message.reply_text(text[:4000])
 
@@ -309,6 +348,7 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("today", today_command))
 app.add_handler(CommandHandler("view", view_command))
 app.add_handler(CommandHandler("download", download_command))
+app.add_handler(CommandHandler("random", random_command))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 app.run_polling()
