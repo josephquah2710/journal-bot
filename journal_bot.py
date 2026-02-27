@@ -12,9 +12,9 @@ from psycopg.rows import dict_row
 from datetime import datetime, date
 from typing import Optional
 
-def parse_yyyy_mm_dd(s: str) -> Optional[date]:
+def parse_dd_mm_yyyy(s: str) -> Optional[date]:
     try:
-        return datetime.strptime(s, "%Y-%m-%d").date()
+        return datetime.strptime(s, "%d-%m-%Y").date()
     except ValueError:
         return None
 
